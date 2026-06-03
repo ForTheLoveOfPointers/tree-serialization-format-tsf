@@ -33,40 +33,43 @@ impl<'a> Lexer<'a> {
     }
 
     // Goes char by char to get new tokens
+    // FSM
     pub fn scan(&mut self) -> Tokens {
     
 
         while let Some(c) = self.char.next() {
-            return match c  {
-                ' ' => {
-                    if self.state != LexerState::InString {
+
+            match self.state {
+                LexerState::InString => {
+                    if c == '"' {
                         self.state = LexerState::Normal;
+                        return Tokens::TextDelimit;
                     }
-                    continue;
+
+                    return Tokens::Text;
                 },
-                '\"' => {
-                    if self.state == LexerState::Normal {
+                LexerState::Normal => {
+                    if c == ' ' {continue;}
+
+                    if c == '\"' {
                         self.state = LexerState::InString;
-                    } else {
-                        self.state = LexerState::Normal;
+                        return Tokens::TextDelimit;
                     }
-                    Tokens::TextDelimit
-                },
-                _ => {
-                    if self.state == LexerState::InString {
-                        return Tokens::Text;
-                    }
+
                     if c == '\n' {
                         self.state = LexerState::StartOfLine;
-                        return Tokens::NewLine
-                    } 
-                    if c.is_digit(10) && self.state == LexerState::StartOfLine { 
-                        return Tokens::Depth;
+                        return Tokens::NewLine;
                     }
+
                     
-                    Tokens::Identifier
+
+                    return Tokens::Identifier;
+                },
+                LexerState::StartOfLine => {
+                    if c.is_digit(10) {return Tokens::Depth}
+                    if c == ' ' { self.state = LexerState::Normal; }
                 }
-            };
+            }
 
 
         }

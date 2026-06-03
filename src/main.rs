@@ -10,7 +10,8 @@ fn main() {
 
     loop {
         let tok = lex.scan();
-        if tok == Tokens::Eof {return;}
         println!("{:?}", tok);
+
+        if tok == Tokens::Eof {return;}
     }
 }
