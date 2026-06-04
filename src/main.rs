@@ -1,68 +1,19 @@
-pub mod ast;
+use std::io::{self, BufReader};
+use crate::lexer::lexer_types::Token;
 
-use ast::syntax_tree_types::{Attribute, Document, Node, Value};
+pub mod ast;
+pub mod lexer;
+
 
 fn main() {
-    let doc = Document {
-        root: Node {
-            name: "html".into(),
-            attrs: vec![],
-            content: None,
-            children: vec![
-                Node {
-                    name: "head".into(),
-                    attrs: vec![],
-                    content: None,
-                    children: vec![Node {
-                        name: "title".into(),
-                        attrs: vec![],
-                        content: Some("My page".into()),
-                        children: vec![],
-                    }],
-                },
-                Node {
-                    name: "body".into(),
-                    attrs: vec![],
-                    content: None,
-                    children: vec![
-                        Node {
-                            name: "h1".into(),
-                            attrs: vec![],
-                            content: Some("Hello".into()),
-                            children: vec![],
-                        },
-                        Node {
-                            name: "div".into(),
-                            attrs: vec![Attribute {
-                                key: "class".into(),
-                                value: Value::String("container".into()),
-                            }],
-                            content: None,
-                            children: vec![],
-                        },
-                        Node {
-                            name: "button".into(),
-                            attrs: vec![
-                                Attribute {
-                                    key: "class".into(),
-                                    value: Value::String("primary".into()),
-                                },
-                                Attribute {
-                                    key: "disabled".into(),
-                                    value: Value::Boolean(true),
-                                },
-                            ],
-                            content: Some("Click me".into()),
-                            children: vec![],
-                        },
-                    ],
-                },
-            ],
-        },
-    };
+    let stdin = io::stdin();
+    let reader = BufReader::new(stdin.lock());
+    let mut lex = crate::lexer::lexer_types::Lexer::new(reader);
 
-    println!("=== TSF Tree ===\n");
-    print!("{doc}");
-    println!("\n=== Debug ===\n");
-    println!("{doc:#?}");
+    loop {
+        let tok = lex.scan();
+        println!("{:?}", tok);
+
+        if tok == Token::Eof { return; }
+    }
 }
