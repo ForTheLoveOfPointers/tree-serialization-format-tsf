@@ -1,17 +1,19 @@
+use std::io::{self, BufReader};
+use crate::lexer::lexer_types::TokenType;
+
 pub mod ast;
 pub mod lexer;
 
 
-use crate::lexer::lexer_types::Tokens;
-
 fn main() {
-    let doc = "0 html\n1 head\n2 title \"My page\"\n1 body \"contents\"\n2 title \"My page\"";
-    let mut lex = lexer::lexer_types::Lexer::new(doc);
+    let stdin = io::stdin();
+    let reader = BufReader::new(stdin.lock());
+    let mut lex = crate::lexer::lexer_types::Lexer::new(reader);
 
     loop {
         let tok = lex.scan();
-        println!("{:?}", tok);
+        println!("{:?} : {:?}", tok.value, tok.token_t);
 
-        if tok == Tokens::Eof {return;}
+        if tok.token_t == TokenType::Eof { return; }
     }
 }
