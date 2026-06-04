@@ -2,10 +2,10 @@ use std::io::BufRead;
 use std::mem;
 
 #[derive(PartialEq, Debug)]
-pub enum TokenType {
-    Depth,
-    Identifier,
-    Text,
+pub enum Token {
+    Depth(String),
+    Identifier(String),
+    Text(String),
     TextDelimit,
     Assign,
     NewLine,
@@ -25,10 +25,6 @@ enum ScanOutcome {
     Eof,
 }
 
-pub struct Token {
-    pub value: Option<String>,
-    pub token_t: TokenType,
-}
 
 pub struct Lexer<R: BufRead> {
     reader: R,
@@ -56,7 +52,7 @@ impl<R: BufRead> Lexer<R> {
             };
             match outcome {
                 ScanOutcome::Token(tok) => return tok,
-                ScanOutcome::Eof => return Token { value: None, token_t: TokenType::Eof },
+                ScanOutcome::Eof => return Token::Eof,
                 ScanOutcome::Continue => {},
             }
         }
@@ -82,25 +78,25 @@ impl<R: BufRead> Lexer<R> {
 
         if b == b'\n' {
             if !acc.is_empty() {
-                return ScanOutcome::Token(Token { value: Some(mem::take(acc)), token_t: TokenType::Identifier });
+                return ScanOutcome::Token(Token::Identifier(mem::take(acc)));
             }
             self.reader.consume(1);
             self.state = LexerState::StartOfLine;
-            return ScanOutcome::Token(Token { value: None, token_t: TokenType::NewLine });
+            return ScanOutcome::Token(Token::NewLine);
         }
         if b == b' ' {
             self.reader.consume(1);
             if !acc.is_empty() {
-                return ScanOutcome::Token(Token { value: Some(mem::take(acc)), token_t: TokenType::Identifier });
+                return ScanOutcome::Token(Token::Identifier(mem::take(acc)));
             }
             return ScanOutcome::Continue;
         }
         if b == b'=' {
             if !acc.is_empty() {
-                return ScanOutcome::Token(Token { value: Some(mem::take(acc)), token_t: TokenType::Identifier });
+                return ScanOutcome::Token(Token::Identifier(mem::take(acc)));
             }
             self.reader.consume(1);
-            return ScanOutcome::Token(Token { value: None, token_t: TokenType::Assign });
+            return ScanOutcome::Token(Token::Assign);
         }
         if b == b'"' {
             self.reader.consume(1);
@@ -117,7 +113,7 @@ impl<R: BufRead> Lexer<R> {
 
         if b == b' ' {
             self.state = LexerState::Normal;
-            return ScanOutcome::Token(Token { value: Some(mem::take(acc)), token_t: TokenType::Depth });
+            return ScanOutcome::Token(Token::Depth(mem::take(acc)));
         }
         if b.is_ascii_digit() {
             acc.push(b as char);
@@ -130,7 +126,7 @@ impl<R: BufRead> Lexer<R> {
 
         if b == b'"' {
             self.state = LexerState::Normal;
-            return ScanOutcome::Token(Token { value: Some(mem::take(acc)), token_t: TokenType::Text });
+            return ScanOutcome::Token(Token::Text(mem::take(acc)));
         }
         acc.push(b as char);
         ScanOutcome::Continue

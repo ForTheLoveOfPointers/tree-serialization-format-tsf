@@ -1,5 +1,5 @@
 use std::io::{self, BufReader};
-use crate::lexer::lexer_types::TokenType;
+use crate::lexer::lexer_types::Token;
 
 pub mod ast;
 pub mod lexer;
@@ -12,8 +12,8 @@ fn main() {
 
     loop {
         let tok = lex.scan();
-        println!("{:?} : {:?}", tok.value, tok.token_t);
+        println!("{:?}", tok);
 
-        if tok.token_t == TokenType::Eof { return; }
+        if tok == Token::Eof { return; }
     }
 }
