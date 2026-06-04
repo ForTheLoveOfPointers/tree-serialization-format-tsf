@@ -270,3 +270,102 @@ Componentes mínimos:
 No se requiere motor de renderizado.
 
 TSF define únicamente la representación de árboles.
+
+---
+
+## 16. Plan de implementación del parser (feature/parser)
+
+### 16.1 Archivos a crear/modificar
+
+| Archivo | Acción |
+|---------|--------|
+| `src/parser.rs` | Crear — declaración del módulo: `pub mod parser_types;` |
+| `src/parser/parser_types.rs` | Crear — `Parser`, `ParseError`, lógica completa |
+| `src/errors.rs` | Crear — declaración del módulo: `pub mod error_types;` |
+| `src/errors/error_types.rs` | Crear — `ParseError` y demás tipos de error |
+| `src/main.rs` | Modificar — usar `Parser::parse()` en lugar del bucle de tokens |
+
+### 16.2 `ParseError` (src/errors/error_types.rs)
+
+```rust
+pub enum ParseError {
+    IoError(std::io::Error),
+    DepthJump { current_depth: u32, target_depth: u32 },
+    UnexpectedToken { expected: String, found: Token },
+    InvalidValue { raw: String },
+    EmptyInput,
+}
+```
+
+Implementa `fmt::Display` y `std::error::Error`.
+
+### 16.3 `Parser<R: BufRead>` (src/parser/parser_types.rs)
+
+```rust
+pub struct Parser<R: BufRead> {
+    lex: Lexer<R>,
+    lookahead: Option<Token>,
+}
+```
+
+**Métodos públicos:**
+- `Parser::new(reader: R) -> Self` — construye el parser con un token de lookahead.
+- `Parser::parse(&mut self) -> Result<Document, ParseError>` — consume toda la entrada y construye el árbol.
+
+**Métodos privados:**
+- `peek(&self) -> Option<&Token>` — lookahead de un token sin consumir.
+- `advance(&mut self) -> Token` — consume y retorna el lookahead, cargando el siguiente.
+- `expect_identifier(&mut self) -> Result<String, ParseError>` — consume un `Identifier` o error.
+- `parse_line(&mut self) -> Result<(u32, Node), ParseError>` — una línea completa: `Depth name [attrs] [content] NewLine`.
+- `parse_attributes(&mut self) -> Result<Vec<Attribute>, ParseError>` — cero o más `Identifier Assign Value`.
+- `parse_value(&mut self) -> Result<Value, ParseError>` — `Text` → String; `Identifier` → Integer/Float/Boolean/Null o error.
+
+### 16.4 Algoritmo de reconstrucción del árbol (sección 12)
+
+```
+stack = []
+loop:
+    if peek es Eof → break
+    (depth, node) = parse_line()
+    if depth > stack.len() → error DepthJump
+    while stack.len() > depth → pop
+    if let Some(parent) = stack.last_mut() → parent.children.push(node)
+    stack.push(node)
+return Document { root: stack[0] }
+```
+
+**Validaciones:**
+- Primera línea debe tener depth 0 → si no, `DepthJump { 0, depth }`.
+- Depth sólo puede aumentar en 1 → `depth > stack.len()` es salto inválido.
+- Después de `=`, `Text` → `Value::String`; `Identifier` se parsea como entero, luego flotante, luego booleano, luego null, o error.
+
+### 16.5 Cambios en main.rs
+
+```rust
+fn main() {
+    let stdin = io::stdin();
+    let reader = BufReader::new(stdin.lock());
+    let mut parser = Parser::new(reader);
+    match parser.parse() {
+        Ok(doc) => println!("{}", doc),
+        Err(e) => eprintln!("{}", e),
+    }
+}
+```
+
+### 16.6 Tests
+
+Siguiendo el estilo de `syntax_tree_types.rs` (`#[cfg(test)] mod tests`):
+
+| Test | Descripción |
+|------|-------------|
+| `parse_root_only` | `"0 html\n"` → Document con un solo nodo |
+| `parse_nested_tree` | Árbol completo → coincide con AST esperado |
+| `parse_attributes` | Línea con `key=value` y `key="string"` |
+| `parse_content` | Línea con contenido textual al final |
+| `parse_roundtrip` | Serializar AST, parsear resultado, comparar |
+| `parse_error_empty` | `""` → `EmptyInput` |
+| `parse_error_depth` | `"2 root\n"` → `DepthJump` |
+| `parse_error_depth_jump` | `"0 root\n2 child\n"` → `DepthJump` |
+| `parse_error_invalid_value` | `"0 n key=baz\n"` → `InvalidValue` |
+| `parse_error_unexpected_token` | `"0 =bad\n"` → `UnexpectedToken` |
