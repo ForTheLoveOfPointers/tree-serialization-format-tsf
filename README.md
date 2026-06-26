@@ -125,7 +125,18 @@ No indentation ambiguity, no bracket balancing, trivially machine-generated and 
 
 ## Current Status
 
-This is an early-stage reference implementation (v0.1.0). The **AST types** and **serializer** (via `Display`) are complete. The lexer, parser, validator, and error handling are placeholder modules ready to be built.
+This is an early-stage reference implementation (v0.1.0).
+
+| Component        | Status     |
+|------------------|------------|
+| AST types        | ✓ Complete |
+| Serializer (`Display`) | ✓ Complete |
+| Lexer            | ✓ Complete |
+| Parser           | ✓ Complete |
+| Error handling   | ✓ Complete |
+| Validator        | ⏳ Planned  |
+
+The parser reads TSF from `stdin` and outputs canonical TSF on `stdout`. Error messages are printed to `stderr`.
 
 ## License
 

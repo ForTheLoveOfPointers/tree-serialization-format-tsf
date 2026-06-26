@@ -1,19 +1,25 @@
+use std::env;
 use std::io::{self, BufReader};
-use crate::lexer::lexer_types::Token;
 
 pub mod ast;
+pub mod errors;
 pub mod lexer;
-
+pub mod parser;
 
 fn main() {
+    let debug = env::args().any(|a| a == "--debug" || a == "-d");
+
     let stdin = io::stdin();
     let reader = BufReader::new(stdin.lock());
-    let mut lex = crate::lexer::lexer_types::Lexer::new(reader);
-
-    loop {
-        let tok = lex.scan();
-        println!("{:?}", tok);
-
-        if tok == Token::Eof { return; }
+    let mut parser = parser::parser_types::Parser::new(reader);
+    match parser.parse() {
+        Ok(doc) => {
+            if debug {
+                println!("{doc:#?}");
+            } else {
+                println!("{doc}");
+            }
+        }
+        Err(e) => eprintln!("{e}"),
     }
 }
