@@ -1,7 +1,7 @@
 use std::io::BufRead;
 use std::mem;
 
-#[derive(PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum Token {
     Depth(String),
     Identifier(String),
